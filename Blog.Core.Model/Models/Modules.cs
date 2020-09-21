@@ -6,7 +6,7 @@ namespace Blog.Core.Model.Models
     /// <summary>
     /// 接口API地址信息表
     /// </summary>
-    public class Modules : RootEntity
+    public class Modules : RootEntity<int>
     {
         public Modules()
         {

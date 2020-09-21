@@ -47,6 +47,20 @@ namespace Blog.Core.Extensions
                         DbType = (DbType)m.DbType,
                         IsAutoCloseConnection = true,
                         IsShardSameThread = false,
+                        ConfigureExternalServices = new ConfigureExternalServices()
+                        {
+                            EntityService = (property, column) =>
+                            {
+                                if (column.IsPrimarykey && property.PropertyType == typeof(int))
+                                {
+                                    column.IsIdentity = true;
+                                }
+                                else
+                                {
+                                    column.IsIdentity = false;
+                                }
+                            }
+                        },
                         AopEvents = new AopEvents
                         {
                             OnLogExecuting = (sql, p) =>

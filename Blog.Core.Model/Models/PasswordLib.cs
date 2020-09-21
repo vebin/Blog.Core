@@ -7,11 +7,8 @@ namespace Blog.Core.Model.Models
     /// 密码库表
     /// </summary>
     [SugarTable("PasswordLib", "WMBLOG_MSSQL_2")]
-    public class PasswordLib
+    public class PasswordLib : RootEntity<int>
     {
-        [SugarColumn(IsNullable = false, IsPrimaryKey = true, IsIdentity = true)]
-        public int PLID { get; set; }
-
         /// <summary>
         ///获取或设置是否禁用，逻辑上的删除，非物理删除
         /// </summary>

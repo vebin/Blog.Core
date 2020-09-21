@@ -7,7 +7,7 @@ namespace Blog.Core.Model.Models
     /// <summary>
     /// Tibug 类别
     /// </summary>
-    public class Topic:RootEntity
+    public class Topic:RootEntity<int>
     {
         public Topic()
         {

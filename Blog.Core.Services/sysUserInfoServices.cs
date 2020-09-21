@@ -61,7 +61,7 @@ namespace Blog.Core.FrameWork.Services
             var roleList = await _roleRepository.Query(a => a.IsDeleted==false);
             if (user != null)
             {
-                var userRoles = await _userRoleServices.Query(ur => ur.UserId == user.uID);
+                var userRoles = await _userRoleServices.Query(ur => ur.UserId == user.Id);
                 if (userRoles.Count > 0)
                 {
                     var arr = userRoles.Select(ur => ur.RoleId.ObjToString()).ToList();

@@ -523,20 +523,20 @@ namespace Blog.Core.Repository.Base
         //        .And(s => s.tdIsDelete != true)
         //        .And(p => p.IsDeleted != true)
         //        .And(p => p.pmId != null)
-        //        .AndIF(!string.IsNullOrEmpty(model.paramCode1), (s) => s.uID == model.paramCode1.ObjToInt())
+        //        .AndIF(!string.IsNullOrEmpty(model.paramCode1), (s) => s.Id == model.paramCode1.ObjToInt())
         //                .AndIF(!string.IsNullOrEmpty(model.searchText), (s) => (s.groupName != null && s.groupName.Contains(model.searchText))
         //                        || (s.jobName != null && s.jobName.Contains(model.searchText))
         //                        || (s.uRealName != null && s.uRealName.Contains(model.searchText)))
         //                .ToExpression();//拼接表达式
         //var data = await _projectMemberServices.QueryTabsPage<sysUserInfo, ProjectMember, ProjectToUser>(
-        //    (s, p) => new object[] { JoinType.Left, s.uID == p.uId },
+        //    (s, p) => new object[] { JoinType.Left, s.Id == p.uId },
         //    (s, p) => new ProjectToUser
         //    {
-        //        uID = s.uID,
+        //        Id = s.Id,
         //        uRealName = s.uRealName,
         //        groupName = s.groupName,
         //        jobName = s.jobName
-        //    }, exp, s => new { s.uID, s.uRealName, s.groupName, s.jobName }, model.currentPage, model.pageSize, model.orderField + " " + model.orderType);
+        //    }, exp, s => new { s.Id, s.uRealName, s.groupName, s.jobName }, model.currentPage, model.pageSize, model.orderField + " " + model.orderType);
 
     }
 

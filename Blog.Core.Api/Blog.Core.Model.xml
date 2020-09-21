@@ -187,43 +187,38 @@
             逻辑删除
             </summary>
         </member>
-        <member name="P:Blog.Core.Model.Models.Guestbook.id">
-            <summary>
-            留言表
-            </summary>
-        </member>
         <member name="P:Blog.Core.Model.Models.Guestbook.blogId">
-            <summary>博客ID
+            <summary>
             
             </summary>
         </member>
         <member name="P:Blog.Core.Model.Models.Guestbook.createdate">
-            <summary>创建时间
+            <summary>
             
             </summary>
         </member>
         <member name="P:Blog.Core.Model.Models.Guestbook.phone">
-            <summary>手机
+            <summary>
             
             </summary>
         </member>
         <member name="P:Blog.Core.Model.Models.Guestbook.QQ">
-            <summary>qq
+            <summary>
             
             </summary>
         </member>
         <member name="P:Blog.Core.Model.Models.Guestbook.body">
-            <summary>留言内容
+            <summary>
             
             </summary>
         </member>
         <member name="P:Blog.Core.Model.Models.Guestbook.ip">
-            <summary>ip地址
+            <summary>
             
             </summary>
         </member>
         <member name="P:Blog.Core.Model.Models.Guestbook.isshow">
-            <summary>是否显示在前台,0否1是
+            <summary>
             
             </summary>
         </member>
@@ -657,11 +652,6 @@
             用户信息表
             </summary>
         </member>
-        <member name="P:Blog.Core.Model.Models.sysUserInfo.uID">
-            <summary>
-            用户ID
-            </summary>
-        </member>
         <member name="P:Blog.Core.Model.Models.sysUserInfo.uLoginName">
             <summary>
             登录账号
@@ -847,7 +837,7 @@
             修改时间
             </summary>
         </member>
-        <member name="P:Blog.Core.Model.RootEntity.Id">
+        <member name="P:Blog.Core.Model.RootEntity`1.Id">
             <summary>
             ID
             </summary>

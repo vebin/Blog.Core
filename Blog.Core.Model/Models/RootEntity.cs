@@ -1,15 +1,14 @@
 ﻿using SqlSugar;
+using System;
 
 namespace Blog.Core.Model
 {
-    public class RootEntity
+    public class RootEntity<TKey> where TKey : IEquatable<TKey>
     {
         /// <summary>
         /// ID
         /// </summary>
-        [SugarColumn(IsNullable = false, IsPrimaryKey = true, IsIdentity = true)]
-        public int Id { get; set; }
-
-      
+        [SugarColumn(IsNullable = false, IsPrimaryKey = true)]
+        public TKey Id { get; set; }
     }
 }

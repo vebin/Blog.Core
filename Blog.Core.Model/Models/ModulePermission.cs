@@ -6,7 +6,7 @@ namespace Blog.Core.Model.Models
     /// <summary>
     /// 菜单与按钮关系表
     /// </summary>
-    public class ModulePermission : RootEntity
+    public class ModulePermission : RootEntity<int>
     {
 
         /// <summary>

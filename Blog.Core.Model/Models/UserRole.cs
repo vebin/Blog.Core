@@ -6,7 +6,7 @@ namespace Blog.Core.Model.Models
     /// <summary>
     /// 用户跟角色关联表
     /// </summary>
-    public class UserRole : RootEntity
+    public class UserRole : RootEntity<int>
     {
         public UserRole() { }
 

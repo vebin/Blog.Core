@@ -274,7 +274,7 @@ namespace Blog.Core.Controllers
             var blogs = await _blogArticleServices.Query(d => d.bID == 1);
 
             // 从从库（Sqlserver）中，获取pwds
-            var pwds = await _passwordLibServices.Query(d => d.PLID > 0);
+            var pwds = await _passwordLibServices.Query(d => d.Id > 0);
 
             return new
             {

@@ -7,7 +7,7 @@ namespace Blog.Core.Model.Models
     /// <summary>
     /// 路由菜单表
     /// </summary>
-    public class Permission : RootEntity
+    public class Permission : RootEntity<int>
     {
         public Permission()
         {
