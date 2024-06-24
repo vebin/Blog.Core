@@ -13,12 +13,9 @@ namespace Blog.Core.Services
 {
     public class BlogArticleServices : BaseServices<BlogArticle>, IBlogArticleServices
     {
-        IBaseRepository<BlogArticle> _dal;
         IMapper _mapper;
-        public BlogArticleServices(IBaseRepository<BlogArticle> dal, IMapper mapper)
+        public BlogArticleServices(IMapper mapper)
         {
-            this._dal = dal;
-            base.BaseDal = dal;
             this._mapper = mapper;
         }
         /// <summary>
@@ -26,7 +23,7 @@ namespace Blog.Core.Services
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<BlogViewModels> GetBlogDetails(int id)
+        public async Task<BlogViewModels> GetBlogDetails(long id)
         {
             // 此处想获取上一条下一条数据，因此将全部数据list出来，有好的想法请提出
             //var bloglist = await base.Query(a => a.IsDeleted==false, a => a.bID);
@@ -65,7 +62,6 @@ namespace Blog.Core.Services
         /// <summary>
         /// 获取博客列表
         /// </summary>
-        /// <param name="id"></param>
         /// <returns></returns>
         [Caching(AbsoluteExpiration = 10)]
         public async Task<List<BlogArticle>> GetBlogs()

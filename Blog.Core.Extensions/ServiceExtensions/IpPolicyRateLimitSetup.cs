@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 
 namespace Blog.Core.Extensions
 {
@@ -22,7 +21,7 @@ namespace Blog.Core.Extensions
             // inject counter and rules stores
             services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
             services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-
+            services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
             // inject counter and rules distributed cache stores
             //services.AddSingleton<IIpPolicyStore, DistributedCacheIpPolicyStore>();
             //services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();

@@ -6,7 +6,7 @@ namespace Blog.Core.Model.Models
     /// <summary>
     /// 按钮跟权限关联表
     /// </summary>
-    public class RoleModulePermission : RootEntity
+    public class RoleModulePermission : RoleModulePermissionRoot<long>
     {
         public RoleModulePermission()
         {
@@ -21,28 +21,16 @@ namespace Blog.Core.Model.Models
         /// </summary>
         [SugarColumn(IsNullable = true)]
         public bool? IsDeleted { get; set; }
-        /// <summary>
-        /// 角色ID
-        /// </summary>
-        public int RoleId { get; set; }
-        /// <summary>
-        /// 菜单ID
-        /// </summary>
-        public int ModuleId { get; set; }
-        /// <summary>
-        /// api ID
-        /// </summary>
-        [SugarColumn(IsNullable = true)]
-        public int? PermissionId { get; set; }
+       
         /// <summary>
         /// 创建ID
         /// </summary>
         [SugarColumn(IsNullable = true)]
-        public int? CreateId { get; set; }
+        public long? CreateId { get; set; }
         /// <summary>
         /// 创建者
         /// </summary>
-        [SugarColumn(ColumnDataType = "nvarchar", Length = 50, IsNullable = true)]
+        [SugarColumn(Length = 50, IsNullable = true)]
         public string CreateBy { get; set; }
         /// <summary>
         /// 创建时间
@@ -53,11 +41,11 @@ namespace Blog.Core.Model.Models
         /// 修改ID
         /// </summary>
         [SugarColumn(IsNullable = true)]
-        public int? ModifyId { get; set; }
+        public long? ModifyId { get; set; }
         /// <summary>
         /// 修改者
         /// </summary>
-        [SugarColumn(ColumnDataType = "nvarchar", Length = 50, IsNullable = true)]
+        [SugarColumn(Length = 50, IsNullable = true)]
         public string ModifyBy { get; set; }
         /// <summary>
         /// 修改时间

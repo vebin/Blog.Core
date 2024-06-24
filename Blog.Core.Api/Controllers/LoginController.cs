@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Blog.Core.AuthHelper;
+﻿using Blog.Core.AuthHelper;
 using Blog.Core.AuthHelper.OverWrite;
 using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
@@ -12,8 +6,11 @@ using Blog.Core.Model;
 using Blog.Core.Model.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Blog.Core.Common.Swagger;
+
 
 namespace Blog.Core.Controllers
 {
@@ -23,14 +20,14 @@ namespace Blog.Core.Controllers
     [Produces("application/json")]
     [Route("api/Login")]
     [AllowAnonymous]
-    public class LoginController : Controller
+    public class LoginController : BaseApiController
     {
         readonly ISysUserInfoServices _sysUserInfoServices;
         readonly IUserRoleServices _userRoleServices;
         readonly IRoleServices _roleServices;
         readonly PermissionRequirement _requirement;
         private readonly IRoleModulePermissionServices _roleModulePermissionServices;
-
+        private readonly ILogger<LoginController> _logger;
 
         /// <summary>
         /// 构造函数注入
@@ -40,17 +37,22 @@ namespace Blog.Core.Controllers
         /// <param name="roleServices"></param>
         /// <param name="requirement"></param>
         /// <param name="roleModulePermissionServices"></param>
-        public LoginController(ISysUserInfoServices sysUserInfoServices, IUserRoleServices userRoleServices, IRoleServices roleServices, PermissionRequirement requirement, IRoleModulePermissionServices roleModulePermissionServices)
+        /// <param name="logger"></param>
+        public LoginController(ISysUserInfoServices sysUserInfoServices, IUserRoleServices userRoleServices,
+            IRoleServices roleServices, PermissionRequirement requirement,
+            IRoleModulePermissionServices roleModulePermissionServices, ILogger<LoginController> logger)
         {
             this._sysUserInfoServices = sysUserInfoServices;
             this._userRoleServices = userRoleServices;
             this._roleServices = roleServices;
             _requirement = requirement;
             _roleModulePermissionServices = roleModulePermissionServices;
+            _logger = logger;
         }
 
 
         #region 获取token的第1种方法
+
         /// <summary>
         /// 获取JWT的方法1
         /// </summary>
@@ -68,8 +70,7 @@ namespace Blog.Core.Controllers
             var user = await _sysUserInfoServices.GetUserRoleNameStr(name, MD5Helper.MD5Encrypt32(pass));
             if (user != null)
             {
-
-                TokenModelJwt tokenModel = new TokenModelJwt { Uid = 1, Role = user };
+                TokenModelJwt tokenModel = new TokenModelJwt {Uid = 1, Role = user};
 
                 jwtStr = JwtHelper.IssueJwt(tokenModel);
                 suc = true;
@@ -117,9 +118,10 @@ namespace Blog.Core.Controllers
             {
                 jwtStr = "login fail!!!";
             }
+
             var result = new
             {
-                data = new { success = suc, token = jwtStr }
+                data = new {success = suc, token = jwtStr}
             };
 
             return new MessageModel<string>()
@@ -129,8 +131,8 @@ namespace Blog.Core.Controllers
                 response = jwtStr
             };
         }
-        #endregion
 
+        #endregion
 
 
         /// <summary>
@@ -142,29 +144,30 @@ namespace Blog.Core.Controllers
         [HttpGet]
         [Route("JWTToken3.0")]
         public async Task<MessageModel<TokenInfoViewModel>> GetJwtToken3(string name = "", string pass = "")
+
         {
             string jwtStr = string.Empty;
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(pass))
-            {
-                return new MessageModel<TokenInfoViewModel>()
-                {
-                    success = false,
-                    msg = "用户名或密码不能为空",
-                };
-            }
+                return Failed<TokenInfoViewModel>("用户名或密码不能为空");
 
             pass = MD5Helper.MD5Encrypt32(pass);
 
-            var user = await _sysUserInfoServices.Query(d => d.uLoginName == name && d.uLoginPWD == pass && d.tdIsDelete == false);
+            var user = await _sysUserInfoServices.Query(d =>
+                d.LoginName == name && d.LoginPWD == pass && d.IsDeleted == false);
             if (user.Count > 0)
             {
                 var userRoles = await _sysUserInfoServices.GetUserRoleNameStr(name, pass);
                 //如果是基于用户的授权策略，这里要添加用户;如果是基于角色的授权策略，这里要添加角色
-                var claims = new List<Claim> {
+                var claims = new List<Claim>
+                {
                     new Claim(ClaimTypes.Name, name),
-                    new Claim(JwtRegisteredClaimNames.Jti, user.FirstOrDefault().uID.ToString()),
-                    new Claim(ClaimTypes.Expiration, DateTime.Now.AddSeconds(_requirement.Expiration.TotalSeconds).ToString()) };
+                    new Claim(JwtRegisteredClaimNames.Jti, user.FirstOrDefault().Id.ToString()),
+                    new Claim("TenantId", user.FirstOrDefault().TenantId.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Iat, DateTime.Now.DateToTimeStamp()),
+                    new Claim(ClaimTypes.Expiration,
+                        DateTime.Now.AddSeconds(_requirement.Expiration.TotalSeconds).ToString())
+                };
                 claims.AddRange(userRoles.Split(',').Select(s => new Claim(ClaimTypes.Role, s)));
 
 
@@ -186,21 +189,20 @@ namespace Blog.Core.Controllers
                 }
 
                 var token = JwtToken.BuildJwtToken(claims.ToArray(), _requirement);
-                return new MessageModel<TokenInfoViewModel>()
-                {
-                    success = true,
-                    msg = "获取成功",
-                    response = token
-                };
+                return Success(token, "获取成功");
             }
             else
             {
-                return new MessageModel<TokenInfoViewModel>()
-                {
-                    success = false,
-                    msg = "认证失败",
-                };
+                return Failed<TokenInfoViewModel>("认证失败");
             }
+        }
+
+        [HttpGet]
+        [Route("GetJwtTokenSecret")]
+        public async Task<MessageModel<TokenInfoViewModel>> GetJwtTokenSecret(string name = "", string pass = "")
+        {
+            var rlt = await GetJwtToken3(name, pass);
+            return rlt;
         }
 
         /// <summary>
@@ -215,25 +217,29 @@ namespace Blog.Core.Controllers
             string jwtStr = string.Empty;
 
             if (string.IsNullOrEmpty(token))
-            {
-                return new MessageModel<TokenInfoViewModel>()
-                {
-                    success = false,
-                    msg = "token无效，请重新登录！",
-                };
-            }
+                return Failed<TokenInfoViewModel>("token无效，请重新登录！");
             var tokenModel = JwtHelper.SerializeJwt(token);
-            if (tokenModel != null && tokenModel.Uid > 0)
+            if (tokenModel != null && JwtHelper.customSafeVerify(token) && tokenModel.Uid > 0)
             {
                 var user = await _sysUserInfoServices.QueryById(tokenModel.Uid);
-                if (user != null)
+                var value = User.Claims.SingleOrDefault(s => s.Type == JwtRegisteredClaimNames.Iat)?.Value;
+                if (value != null && user.CriticalModifyTime > value.ObjToDate())
                 {
-                    var userRoles = await _sysUserInfoServices.GetUserRoleNameStr(user.uLoginName, user.uLoginPWD);
+                    return Failed<TokenInfoViewModel>("很抱歉,授权已失效,请重新授权！");
+                }
+
+                if (user != null && !(value != null && user.CriticalModifyTime > value.ObjToDate()))
+                {
+                    var userRoles = await _sysUserInfoServices.GetUserRoleNameStr(user.LoginName, user.LoginPWD);
                     //如果是基于用户的授权策略，这里要添加用户;如果是基于角色的授权策略，这里要添加角色
-                    var claims = new List<Claim> {
-                    new Claim(ClaimTypes.Name, user.uLoginName),
-                    new Claim(JwtRegisteredClaimNames.Jti, tokenModel.Uid.ObjToString()),
-                    new Claim(ClaimTypes.Expiration, DateTime.Now.AddSeconds(_requirement.Expiration.TotalSeconds).ToString()) };
+                    var claims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.Name, user.LoginName),
+                        new Claim(JwtRegisteredClaimNames.Jti, tokenModel.Uid.ObjToString()),
+                        new Claim(JwtRegisteredClaimNames.Iat, DateTime.Now.DateToTimeStamp()),
+                        new Claim(ClaimTypes.Expiration,
+                            DateTime.Now.AddSeconds(_requirement.Expiration.TotalSeconds).ToString())
+                    };
                     claims.AddRange(userRoles.Split(',').Select(s => new Claim(ClaimTypes.Role, s)));
 
                     //用户标识
@@ -241,20 +247,11 @@ namespace Blog.Core.Controllers
                     identity.AddClaims(claims);
 
                     var refreshToken = JwtToken.BuildJwtToken(claims.ToArray(), _requirement);
-                    return new MessageModel<TokenInfoViewModel>()
-                    {
-                        success = true,
-                        msg = "获取成功",
-                        response = refreshToken
-                    };
+                    return Success(refreshToken, "获取成功");
                 }
             }
 
-            return new MessageModel<TokenInfoViewModel>()
-            {
-                success = false,
-                msg = "认证失败！",
-            };
+            return Failed<TokenInfoViewModel>("认证失败！");
         }
 
         /// <summary>
@@ -268,7 +265,8 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         [HttpGet]
         [Route("jsonp")]
-        public void Getjsonp(string callBack, long id = 1, string sub = "Admin", int expiresSliding = 30, int expiresAbsoulute = 30)
+        public void Getjsonp(string callBack, long id = 1, string sub = "Admin", int expiresSliding = 30,
+            int expiresAbsoulute = 30)
         {
             TokenModelJwt tokenModel = new TokenModelJwt
             {
@@ -295,5 +293,54 @@ namespace Blog.Core.Controllers
         {
             return MD5Helper.MD5Encrypt32(password);
         }
+
+        /// <summary>
+        /// swagger登录
+        /// </summary>
+        /// <param name="loginRequest"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [Route("/api/Login/swgLogin")]
+        public async Task<dynamic> SwgLogin([FromBody] SwaggerLoginRequest loginRequest)
+        {
+            if (loginRequest is null)
+            {
+                return new {result = false};
+            }
+
+            try
+            {
+                var result = await GetJwtToken3(loginRequest.name, loginRequest.pwd);
+                if (result.success)
+                {
+                    HttpContext.SuccessSwagger();
+                    HttpContext.SuccessSwaggerJwt(result.response.token);
+                    return new {result = true};
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Swagger登录异常");
+            }
+
+            return new {result = false};
+        }
+
+        /// <summary>
+        /// weixin登录
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("wxLogin")]
+        public dynamic WxLogin(string g = "", string token = "")
+        {
+            return new {g, token};
+        }
+    }
+
+    public class SwaggerLoginRequest
+    {
+        public string name { get; set; }
+        public string pwd { get; set; }
     }
 }

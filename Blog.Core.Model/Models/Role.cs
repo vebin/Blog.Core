@@ -6,7 +6,7 @@ namespace Blog.Core.Model.Models
     /// <summary>
     /// 角色表
     /// </summary>
-    public class Role : RootEntity
+    public class Role : RootEntityTkey<long>
     {
         public Role()
         {
@@ -34,17 +34,28 @@ namespace Blog.Core.Model.Models
         /// <summary>
         /// 角色名
         /// </summary>
-        [SugarColumn(ColumnDataType = "nvarchar", Length = 50, IsNullable = true)]
+        [SugarColumn(Length = 50, IsNullable = true)]
         public string Name { get; set; }
         /// <summary>
         ///描述
         /// </summary>
-        [SugarColumn(ColumnDataType = "nvarchar", Length = 100, IsNullable = true)]
+        [SugarColumn(Length = 100, IsNullable = true)]
         public string Description { get; set; }
         /// <summary>
         ///排序
         /// </summary>
         public int OrderSort { get; set; }
+        /// <summary>
+        /// 自定义权限的部门ids
+        /// </summary>
+        [SugarColumn(Length = 500, IsNullable = true)]
+        public string Dids { get; set; }
+        /// <summary>
+        /// 权限范围
+        /// -1 无任何权限；1 自定义权限；2 本部门；3 本部门及以下；4 仅自己；9 全部；
+        /// </summary>
+        [SugarColumn(IsNullable = true)]
+        public int AuthorityScope { get; set; } = -1;
         /// <summary>
         /// 是否激活
         /// </summary>
@@ -53,11 +64,11 @@ namespace Blog.Core.Model.Models
         /// 创建ID
         /// </summary>
         [SugarColumn(IsNullable = true)]
-        public int? CreateId { get; set; }
+        public long? CreateId { get; set; }
         /// <summary>
         /// 创建者
         /// </summary>
-        [SugarColumn(ColumnDataType = "nvarchar", Length = 50, IsNullable = true)]
+        [SugarColumn(Length = 50, IsNullable = true)]
         public string CreateBy { get; set; }
         /// <summary>
         /// 创建时间
@@ -68,7 +79,7 @@ namespace Blog.Core.Model.Models
         /// 修改ID
         /// </summary>
         [SugarColumn(IsNullable = true)]
-        public int? ModifyId { get; set; }
+        public long? ModifyId { get; set; }
         /// <summary>
         /// 修改者
         /// </summary>

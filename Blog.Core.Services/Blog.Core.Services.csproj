@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>netcoreapp3.1</TargetFramework>
-	</PropertyGroup>
+	<Import Project="..\build\common.targets" />
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<OutputPath>..\Blog.Core.Api\bin\Debug\</OutputPath>
@@ -11,11 +9,7 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<OutputPath>..\Blog.Core\bin\Release\</OutputPath>
 	</PropertyGroup>
-	
-	<ItemGroup>
-		<PackageReference Include="AutoMapper" Version="9.0.0" />
-		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="7.0.0" />
-	</ItemGroup>
+	 
 
 	<ItemGroup>
 		<ProjectReference Include="..\Blog.Core.IServices\Blog.Core.IServices.csproj" />

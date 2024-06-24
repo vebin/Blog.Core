@@ -1,40 +1,190 @@
-﻿using Autofac.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.IO;
+﻿// 以下为asp.net 6.0的写法，如果用5.0，请看Program.five.cs文件，
+// 或者参考github上的.net6.0分支相关代码
 
-namespace Blog.Core
-{
-    public class Program
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using Blog.Core;
+using Blog.Core.Common;
+using Blog.Core.Common.Core;
+using Blog.Core.Common.Helper;
+using Blog.Core.Extensions;
+using Blog.Core.Extensions.Apollo;
+using Blog.Core.Extensions.Middlewares;
+using Blog.Core.Extensions.ServiceExtensions;
+using Blog.Core.Filter;
+using Blog.Core.Hubs;
+using Blog.Core.Serilog.Utility;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
+using Serilog;
+using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
+using System.Text;
+
+var builder = WebApplication.CreateBuilder(args);
+
+
+// 1、配置host与容器
+builder.Host
+    .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+    .ConfigureContainer<ContainerBuilder>(builder =>
     {
-        public static void Main(string[] args)
-        {
-            //初始化默认主机Builder
-            Host.CreateDefaultBuilder(args)
-             .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-             .ConfigureWebHostDefaults(webBuilder =>
-             {
-                 webBuilder
-                 .UseStartup<Startup>()
-                 .UseUrls("http://*:8081")
-                 .ConfigureLogging((hostingContext, builder) =>
-                 {
-                     //过滤掉系统默认的一些日志
-                     builder.AddFilter("System", LogLevel.Error);
-                     builder.AddFilter("Microsoft", LogLevel.Error);
-                     builder.AddFilter("Blog.Core.AuthHelper.ApiResponseHandler", LogLevel.Error);
+        builder.RegisterModule(new AutofacModuleRegister());
+        builder.RegisterModule<AutofacPropertityModuleReg>();
+    })
+    .ConfigureAppConfiguration((hostingContext, config) =>
+    {
+        hostingContext.Configuration.ConfigureApplication();
+        config.Sources.Clear();
+        config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+        config.AddConfigurationApollo("appsettings.apollo.json");
+    });
+builder.ConfigureApplication();
 
-                     //可配置文件
-                     var path = Path.Combine(Directory.GetCurrentDirectory(), "Log4net.config");
-                     builder.AddLog4Net(path);
-                 });
-             })
-            // 生成承载 web 应用程序的 Microsoft.AspNetCore.Hosting.IWebHost。Build是WebHostBuilder最终的目的，将返回一个构造的WebHost，最终生成宿主。
-             .Build()
-            // 运行 web 应用程序并阻止调用线程, 直到主机关闭。
-            // ※※※※ 有异常，查看 Log 文件夹下的异常日志 ※※※※  
-             .Run();
-        }
-    }
+// 2、配置服务
+builder.Services.AddSingleton(new AppSettings(builder.Configuration));
+builder.Services.AddAllOptionRegister();
+
+builder.Services.AddUiFilesZipSetup(builder.Environment);
+
+Permissions.IsUseIds4 = AppSettings.app(new string[] { "Startup", "IdentityServer4", "Enabled" }).ObjToBool();
+Permissions.IsUseAuthing = AppSettings.app(new string[] { "Startup", "Authing", "Enabled" }).ObjToBool();
+RoutePrefix.Name = AppSettings.app(new string[] { "AppSettings", "SvcName" }).ObjToString();
+
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
+builder.Services.AddCacheSetup();
+builder.Services.AddSqlsugarSetup();
+builder.Services.AddDbSetup();
+builder.Services.AddInitializationHostServiceSetup();
+
+builder.Host.AddSerilogSetup();
+
+builder.Services.AddAutoMapperSetup();
+builder.Services.AddCorsSetup();
+builder.Services.AddMiniProfilerSetup();
+builder.Services.AddSwaggerSetup();
+builder.Services.AddJobSetup();
+
+builder.Services.AddHttpContextSetup();
+builder.Services.AddAppTableConfigSetup(builder.Environment);
+builder.Services.AddHttpPollySetup();
+builder.Services.AddNacosSetup(builder.Configuration);
+builder.Services.AddRedisInitMqSetup();
+
+builder.Services.AddIpPolicyRateLimitSetup(builder.Configuration);
+builder.Services.AddSignalR().AddNewtonsoftJsonProtocol();
+
+builder.Services.AddAuthorizationSetup();
+if (Permissions.IsUseIds4 || Permissions.IsUseAuthing)
+{
+    if (Permissions.IsUseIds4) builder.Services.AddAuthentication_Ids4Setup();
+    else if (Permissions.IsUseAuthing) builder.Services.AddAuthentication_AuthingSetup();
 }
+else
+{
+    builder.Services.AddAuthentication_JWTSetup();
+}
+
+builder.Services.AddScoped<UseServiceDIAttribute>();
+builder.Services.Configure<KestrelServerOptions>(x => x.AllowSynchronousIO = true)
+    .Configure<IISServerOptions>(x => x.AllowSynchronousIO = true);
+
+builder.Services.AddSession();
+builder.Services.AddDataProtectionSetup();
+builder.Services.AddControllers(o =>
+    {
+        o.Filters.Add(typeof(GlobalExceptionsFilter));
+        //o.Conventions.Insert(0, new GlobalRouteAuthorizeConvention());
+        o.Conventions.Insert(0, new GlobalRoutePrefixFilter(new RouteAttribute(RoutePrefix.Name)));
+    })
+    .AddNewtonsoftJson(options =>
+    {
+        options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+        options.SerializerSettings.ContractResolver = new DefaultContractResolver();
+        options.SerializerSettings.DateFormatString = "yyyy-MM-dd HH:mm:ss";
+        //options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+        options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Local;
+        options.SerializerSettings.Converters.Add(new StringEnumConverter());
+        //将long类型转为string
+        options.SerializerSettings.Converters.Add(new NumberConverter(NumberConverterShip.Int64));
+    });
+
+builder.Services.AddRabbitMQSetup();
+builder.Services.AddKafkaSetup(builder.Configuration);
+builder.Services.AddEventBusSetup();
+
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.Replace(ServiceDescriptor.Transient<IControllerActivator, ServiceBasedControllerActivator>());
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+// 3、配置中间件
+var app = builder.Build();
+IdentityModelEventSource.ShowPII = true;
+
+app.ConfigureApplication();
+app.UseApplicationSetup();
+app.UseResponseBodyRead();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Error");
+    //app.UseHsts();
+}
+
+app.UseEncryptionRequest();
+app.UseEncryptionResponse();
+
+app.UseExceptionHandlerMiddle();
+app.UseIpLimitMiddle();
+app.UseRequestResponseLogMiddle();
+app.UseRecordAccessLogsMiddle();
+app.UseSignalRSendMiddle();
+app.UseIpLogMiddle();
+app.UseAllServicesMiddle(builder.Services);
+
+app.UseSession();
+app.UseSwaggerAuthorized();
+app.UseSwaggerMiddle(() => Assembly.GetExecutingAssembly().GetManifestResourceStream("Blog.Core.Api.index.html"));
+
+app.UseCors(AppSettings.app(new string[] { "Startup", "Cors", "PolicyName" }));
+DefaultFilesOptions defaultFilesOptions = new DefaultFilesOptions();
+defaultFilesOptions.DefaultFileNames.Clear();
+defaultFilesOptions.DefaultFileNames.Add("index.html");
+app.UseDefaultFiles(defaultFilesOptions);
+app.UseStaticFiles();
+app.UseCookiePolicy();
+app.UseStatusCodePages();
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = SerilogRequestUtility.HttpMessageTemplate;
+    options.GetLevel = SerilogRequestUtility.GetRequestLevel;
+    options.EnrichDiagnosticContext = SerilogRequestUtility.EnrichFromRequest;
+});
+app.UseRouting();
+
+if (builder.Configuration.GetValue<bool>("AppSettings:UseLoadTest"))
+{
+    app.UseMiddleware<ByPassAuthMiddleware>();
+}
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseMiniProfilerMiddleware();
+
+app.MapControllers();
+app.MapHub<ChatHub>("/api2/chatHub");
+
+// 4、运行
+app.Run();
